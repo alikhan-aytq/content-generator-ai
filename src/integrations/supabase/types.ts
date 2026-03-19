@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      generation_history: {
+        Row: {
+          content_type: string
+          created_at: string
+          generated_content: string
+          id: string
+          model: string
+          project_id: string | null
+          prompt: string
+          user_id: string
+        }
+        Insert: {
+          content_type?: string
+          created_at?: string
+          generated_content: string
+          id?: string
+          model?: string
+          project_id?: string | null
+          prompt: string
+          user_id: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          generated_content?: string
+          id?: string
+          model?: string
+          project_id?: string | null
+          prompt?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          content_type: string
+          created_at: string
+          id: string
+          prompt: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          content_type?: string
+          created_at?: string
+          id?: string
+          prompt: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          id?: string
+          prompt?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -5,6 +5,8 @@ export interface Project {
   title: string;
   type: string;
   date: string;
+  prompt: string;
+  generatedContent: string;
 }
 
 interface Props {

@@ -14,8 +14,7 @@ export default function Index() {
   const [contentType, setContentType] = useState<ContentType>("social");
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState<ModelId>("gemini-flash");
-  const [contentHistory, setContentHistory] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [generatedContent, setGeneratedContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -25,7 +24,6 @@ export default function Index() {
       return;
     }
     setIsLoading(true);
-    setCurrentPage(contentHistory.length);
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-content", {
@@ -36,13 +34,14 @@ export default function Index() {
       if (data?.error) throw new Error(data.error);
 
       const content = data.content ?? "";
-      setContentHistory((prev) => [...prev, content]);
-      setCurrentPage(contentHistory.length);
+      setGeneratedContent(content);
       const newProject: Project = {
         id: Date.now().toString(),
         title: prompt.slice(0, 40) + (prompt.length > 40 ? "..." : ""),
         type: contentType,
         date: new Date().toLocaleDateString("en-US"),
+        prompt,
+        generatedContent: content,
       };
       setProjects((prev) => [newProject, ...prev].slice(0, 10));
     } catch (err: any) {
@@ -54,7 +53,9 @@ export default function Index() {
   }, [prompt, contentType]);
 
   const handleProjectSelect = (project: Project) => {
-    toast.info(`Project: ${project.title}`);
+    setPrompt(project.prompt);
+    setContentType(project.type as ContentType);
+    setGeneratedContent(project.generatedContent);
   };
 
   return (
@@ -96,9 +97,7 @@ export default function Index() {
             {/* Right column — output */}
             <div className="rounded-xl border bg-card p-5">
               <GeneratedContent
-                contents={contentHistory}
-                currentPage={currentPage}
-                onPageChange={setCurrentPage}
+                content={generatedContent}
                 isLoading={isLoading}
               />
             </div>
