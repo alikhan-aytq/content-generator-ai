@@ -8,12 +8,14 @@ import RecentProjects, { type Project } from "@/components/RecentProjects";
 import { Button } from "@/components/ui/button";
 import { Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Index() {
   const [contentType, setContentType] = useState<ContentType>("social");
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState<ModelId>("gemini-flash");
-  const [generatedContent, setGeneratedContent] = useState("");
+  const [contentHistory, setContentHistory] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -23,14 +25,19 @@ export default function Index() {
       return;
     }
     setIsLoading(true);
-    setGeneratedContent("");
+    setCurrentPage(contentHistory.length);
 
-    // Placeholder — will be replaced with real AI call after Cloud is enabled
     try {
-      await new Promise((r) => setTimeout(r, 1500));
-      const mockContent = `[Demo] Generated content for type "${contentType}":\n\n${prompt}\n\n— This is a placeholder. Connect Lovable Cloud for real generation.`;
-      setGeneratedContent(mockContent);
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: { prompt, contentType, model },
+      });
 
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const content = data.content ?? "";
+      setContentHistory((prev) => [...prev, content]);
+      setCurrentPage(contentHistory.length);
       const newProject: Project = {
         id: Date.now().toString(),
         title: prompt.slice(0, 40) + (prompt.length > 40 ? "..." : ""),
@@ -38,8 +45,9 @@ export default function Index() {
         date: new Date().toLocaleDateString("en-US"),
       };
       setProjects((prev) => [newProject, ...prev].slice(0, 10));
-    } catch {
-      toast.error("Generation error");
+    } catch (err: any) {
+      const msg = err?.message || "Generation error";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -87,7 +95,12 @@ export default function Index() {
 
             {/* Right column — output */}
             <div className="rounded-xl border bg-card p-5">
-              <GeneratedContent content={generatedContent} isLoading={isLoading} />
+              <GeneratedContent
+                contents={contentHistory}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                isLoading={isLoading}
+              />
             </div>
           </div>
         </main>

@@ -1,13 +1,18 @@
-import { Copy, Download, Share2 } from "lucide-react";
+import { Copy, Download, Share2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface Props {
-  content: string;
+  contents: string[];
+  currentPage: number;
+  onPageChange: (page: number) => void;
   isLoading: boolean;
 }
 
-export default function GeneratedContent({ content, isLoading }: Props) {
+export default function GeneratedContent({ contents, currentPage, onPageChange, isLoading }: Props) {
+  const content = contents[currentPage] ?? "";
+  const totalPages = contents.length;
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content);
     toast.success("Copied!");
@@ -51,7 +56,7 @@ export default function GeneratedContent({ content, isLoading }: Props) {
           </div>
         )}
       </div>
-      <div className="flex-1 rounded-lg border bg-muted/30 p-4 min-h-[300px] overflow-auto">
+      <div className="rounded-lg border bg-muted/30 p-4 h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -67,6 +72,32 @@ export default function GeneratedContent({ content, isLoading }: Props) {
           </p>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            disabled={currentPage <= 0}
+            onClick={() => onPageChange(currentPage - 1)}
+          >
+            <ChevronLeft size={16} />
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {currentPage + 1} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            disabled={currentPage >= totalPages - 1}
+            onClick={() => onPageChange(currentPage + 1)}
+          >
+            <ChevronRight size={16} />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
