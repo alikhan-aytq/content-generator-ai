@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import ContentTypeSelector, { type ContentType } from "@/components/ContentTypeSelector";
 import PromptInput from "@/components/PromptInput";
@@ -9,14 +9,43 @@ import { Button } from "@/components/ui/button";
 import { Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Index() {
+  const { user } = useAuth();
   const [contentType, setContentType] = useState<ContentType>("social");
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState<ModelId>("gemini-flash");
   const [generatedContent, setGeneratedContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+
+  // Load history from DB on mount
+  useEffect(() => {
+    if (!user) return;
+    const loadHistory = async () => {
+      const { data, error } = await supabase
+        .from("generation_history")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (!error && data) {
+        setProjects(
+          data.map((row) => ({
+            id: row.id,
+            title: row.prompt.slice(0, 40) + (row.prompt.length > 40 ? "..." : ""),
+            type: row.content_type,
+            date: new Date(row.created_at).toLocaleDateString("en-US"),
+            prompt: row.prompt,
+            generatedContent: row.generated_content,
+          }))
+        );
+      }
+    };
+    loadHistory();
+  }, [user]);
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
@@ -35,22 +64,40 @@ export default function Index() {
 
       const content = data.content ?? "";
       setGeneratedContent(content);
-      const newProject: Project = {
-        id: Date.now().toString(),
-        title: prompt.slice(0, 40) + (prompt.length > 40 ? "..." : ""),
-        type: contentType,
-        date: new Date().toLocaleDateString("en-US"),
-        prompt,
-        generatedContent: content,
-      };
-      setProjects((prev) => [newProject, ...prev].slice(0, 10));
+
+      // Save to DB
+      if (user) {
+        const { data: inserted, error: insertErr } = await supabase
+          .from("generation_history")
+          .insert({
+            user_id: user.id,
+            prompt,
+            content_type: contentType,
+            model,
+            generated_content: content,
+          })
+          .select()
+          .single();
+
+        if (!insertErr && inserted) {
+          const newProject: Project = {
+            id: inserted.id,
+            title: prompt.slice(0, 40) + (prompt.length > 40 ? "..." : ""),
+            type: contentType,
+            date: new Date(inserted.created_at).toLocaleDateString("en-US"),
+            prompt,
+            generatedContent: content,
+          };
+          setProjects((prev) => [newProject, ...prev].slice(0, 10));
+        }
+      }
     } catch (err: any) {
       const msg = err?.message || "Generation error";
       toast.error(msg);
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, contentType]);
+  }, [prompt, contentType, model, user]);
 
   const handleProjectSelect = (project: Project) => {
     setPrompt(project.prompt);
@@ -62,15 +109,12 @@ export default function Index() {
     <div className="flex h-screen flex-col">
       <AppHeader />
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
         <aside className="hidden w-56 shrink-0 border-r bg-card p-4 lg:block overflow-y-auto">
           <RecentProjects projects={projects} onSelect={handleProjectSelect} />
         </aside>
 
-        {/* Main content */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1fr_1fr]">
-            {/* Left column — input */}
             <div className="space-y-5">
               <div className="rounded-xl border bg-card p-5 space-y-5">
                 <div className="space-y-2">
@@ -94,12 +138,8 @@ export default function Index() {
               </Button>
             </div>
 
-            {/* Right column — output */}
             <div className="rounded-xl border bg-card p-5">
-              <GeneratedContent
-                content={generatedContent}
-                isLoading={isLoading}
-              />
+              <GeneratedContent content={generatedContent} isLoading={isLoading} />
             </div>
           </div>
         </main>

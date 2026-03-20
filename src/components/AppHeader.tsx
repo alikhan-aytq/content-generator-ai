@@ -1,6 +1,10 @@
-import { Sparkles } from "lucide-react";
+import { Sparkles, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 export default function AppHeader() {
+  const { user, signOut } = useAuth();
+
   return (
     <header className="flex items-center justify-between border-b bg-card px-6 py-3">
       <div className="flex items-center gap-3">
@@ -9,6 +13,14 @@ export default function AppHeader() {
         </div>
         <h1 className="text-lg font-semibold">AI Content Generator</h1>
       </div>
+      {user && (
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground hidden sm:inline">{user.email}</span>
+          <Button variant="ghost" size="icon" onClick={signOut} title="Выйти">
+            <LogOut size={16} />
+          </Button>
+        </div>
+      )}
     </header>
   );
 }
