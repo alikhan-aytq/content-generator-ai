@@ -21,17 +21,19 @@ export default function Index() {
   const [projects, setProjects] = useState<Project[]>([]);
 
   // Load history from DB on mount
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
+    let cancelled = false;
     const loadHistory = async () => {
       const { data, error } = await supabase
         .from("generation_history")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (!error && data) {
+      if (!error && data && !cancelled) {
         setProjects(
           data.map((row) => ({
             id: row.id,
@@ -45,7 +47,8 @@ export default function Index() {
       }
     };
     loadHistory();
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
@@ -109,7 +112,7 @@ export default function Index() {
     <div className="flex h-screen flex-col">
       <AppHeader />
       <div className="flex flex-1 overflow-hidden">
-        <aside className="hidden w-56 shrink-0 border-r bg-card p-4 lg:block overflow-y-auto">
+        <aside className="hidden w-56 shrink-0 border-r bg-card p-4 md:block overflow-y-auto">
           <RecentProjects projects={projects} onSelect={handleProjectSelect} />
         </aside>
 

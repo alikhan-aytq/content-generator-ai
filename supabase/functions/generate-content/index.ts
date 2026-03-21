@@ -16,7 +16,7 @@ const SYSTEM_PROMPTS: Record<string, string> = {
 };
 
 const MODEL_MAP: Record<string, string> = {
-  "gemini-flash": "gemini-2.5-flash",
+  "gemini-flash": "gemini-2.0-flash-lite",
   "gemini-pro": "gemini-2.5-flash",
 };
 
@@ -41,7 +41,7 @@ serve(async (req) => {
     }
 
     const systemPrompt = SYSTEM_PROMPTS[contentType] ?? SYSTEM_PROMPTS.social;
-    const aiModel = MODEL_MAP[model] ?? "gemini-2.5-flash";
+    const aiModel = MODEL_MAP[model] ?? "gemini-2.0-flash";
 
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
