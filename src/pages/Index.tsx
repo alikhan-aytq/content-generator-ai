@@ -19,6 +19,7 @@ export default function Index() {
   const [generatedContent, setGeneratedContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   // Load history from DB on mount
   const userId = user?.id;
@@ -91,6 +92,7 @@ export default function Index() {
             prompt,
             generatedContent: content,
           };
+          setSelectedProjectId(inserted.id);
           setProjects((prev) => [newProject, ...prev].slice(0, 10));
         }
       }
@@ -106,14 +108,36 @@ export default function Index() {
     setPrompt(project.prompt);
     setContentType(project.type as ContentType);
     setGeneratedContent(project.generatedContent);
+    setSelectedProjectId(project.id);
   };
+
+  const handleProjectDelete = useCallback(async (projectId: string) => {
+    const { error } = await supabase
+      .from("generation_history")
+      .delete()
+      .eq("id", projectId);
+
+    if (error) {
+      toast.error("Failed to delete");
+      return;
+    }
+    setProjects((prev) => prev.filter((p) => p.id !== projectId));
+    setSelectedProjectId((prev) => {
+      if (prev === projectId) {
+        setPrompt("");
+        setGeneratedContent("");
+      }
+      return prev === projectId ? null : prev;
+    });
+    toast.success("Deleted");
+  }, []);
 
   return (
     <div className="flex h-screen flex-col">
       <AppHeader />
       <div className="flex flex-1 overflow-hidden">
         <aside className="hidden w-56 shrink-0 border-r bg-card p-4 md:block overflow-y-auto">
-          <RecentProjects projects={projects} onSelect={handleProjectSelect} />
+          <RecentProjects projects={projects} onSelect={handleProjectSelect} onDelete={handleProjectDelete} />
         </aside>
 
         <main className="flex-1 overflow-y-auto p-6">
