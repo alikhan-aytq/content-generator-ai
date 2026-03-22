@@ -19,7 +19,7 @@ export default function Auth() {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success("Вы вошли в аккаунт");
+        toast.success("Signed in successfully");
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -27,10 +27,10 @@ export default function Auth() {
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
-        toast.success("Проверьте почту для подтверждения аккаунта");
+        toast.success("Check your email to confirm your account");
       }
     } catch (err: any) {
-      toast.error(err.message || "Ошибка авторизации");
+      toast.error(err.message || "Authentication error");
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export default function Auth() {
           </div>
           <h1 className="text-xl font-semibold">AI Content Generator</h1>
           <p className="text-sm text-muted-foreground">
-            {isLogin ? "Войдите в аккаунт" : "Создайте аккаунт"}
+            {isLogin ? "Sign in to your account" : "Create an account"}
           </p>
         </div>
 
@@ -59,25 +59,25 @@ export default function Auth() {
           />
           <Input
             type="password"
-            placeholder="Пароль"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
           />
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Загрузка..." : isLogin ? "Войти" : "Зарегистрироваться"}
+            {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          {isLogin ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
+          {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
           <button
             type="button"
             onClick={() => setIsLogin(!isLogin)}
             className="text-primary underline-offset-4 hover:underline"
           >
-            {isLogin ? "Зарегистрироваться" : "Войти"}
+            {isLogin ? "Sign Up" : "Sign In"}
           </button>
         </p>
       </div>
