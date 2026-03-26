@@ -6,15 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPTS: Record<string, string> = {
-  social:
-    "You are a social media content expert. Generate engaging posts optimised for reach and engagement. Reply only with the content, no meta-commentary.",
-  blog: "You are a professional blog writer. Write well-structured, informative blog content. Reply only with the content.",
-  email:
-    "You are an email copywriting specialist. Write compelling, concise emails. Reply only with the content.",
-  ad: "You are an advertising copywriter. Create persuasive ad copy that drives action. Reply only with the content.",
-};
-
 const MODEL_MAP: Record<string, string> = {
   "gemini-flash": "gemini-2.5-flash",
   "gemini-pro": "gemini-2.5-flash",
@@ -26,10 +17,10 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, contentType, model } = await req.json();
+    const { messages, model } = await req.json();
 
-    if (!prompt || typeof prompt !== "string") {
-      return new Response(JSON.stringify({ error: "prompt is required" }), {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return new Response(JSON.stringify({ error: "messages are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -40,8 +31,13 @@ serve(async (req) => {
       throw new Error("GEMINI_API_KEY is not configured");
     }
 
-    const systemPrompt = SYSTEM_PROMPTS[contentType] ?? SYSTEM_PROMPTS.social;
     const aiModel = MODEL_MAP[model] ?? "gemini-2.5-flash";
+
+    const systemMessage = {
+      role: "system",
+      content:
+        "You are a friendly and creative AI content assistant. Help users brainstorm, write, and refine content for social media, blogs, ads, emails, and more. Be conversational, ask clarifying questions when needed, and provide actionable suggestions. Use markdown formatting for better readability.",
+    };
 
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
@@ -53,10 +49,8 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: aiModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: prompt },
-          ],
+          messages: [systemMessage, ...messages],
+          stream: true,
         }),
       }
     );
@@ -70,14 +64,11 @@ serve(async (req) => {
       );
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content ?? "";
-
-    return new Response(JSON.stringify({ content }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(response.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
-    console.error("generate-content error:", e);
+    console.error("chat error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
