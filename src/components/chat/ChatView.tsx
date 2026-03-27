@@ -48,6 +48,8 @@ export default function ChatView({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Only react to explicit user actions (selecting a conversation or resetting)
+  // Do NOT include `conversations` as dependency — it changes when we save, causing a reset loop
   useEffect(() => {
     if (activeConversationId === null) {
       setMessages([]);
@@ -60,7 +62,8 @@ export default function ChatView({
       setMessages(selected.messages);
       setCurrentConvId(selected.id);
     }
-  }, [activeConversationId, conversations, resetToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConversationId, resetToken]);
 
   const saveConversation = async (msgs: Message[]) => {
     if (!user) return null;

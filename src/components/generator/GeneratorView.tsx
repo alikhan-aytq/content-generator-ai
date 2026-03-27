@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import ContentTypeSelector, { type ContentType } from "@/components/ContentTypeSelector";
 import PromptInput from "@/components/PromptInput";
+import PromptTemplates from "@/components/generator/PromptTemplates";
 import SettingsPanel, { type ModelId } from "@/components/SettingsPanel";
 import GeneratedContent from "@/components/GeneratedContent";
 import { Button } from "@/components/ui/button";
@@ -186,7 +187,13 @@ export default function GeneratorView({
                 </div>
               </div>
 
-              <PromptInput value={prompt} onChange={setPrompt} disabled={isLoading} />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-primary">Prompt</label>
+                  <PromptTemplates onSelect={setPrompt} />
+                </div>
+                <PromptInput value={prompt} onChange={setPrompt} disabled={isLoading} />
+              </div>
 
               <SettingsPanel model={model} onModelChange={onModelChange} />
             </div>
