@@ -1,7 +1,8 @@
-import { Copy, Download, Share2 } from "lucide-react";
+import { Copy, Download, Share2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import jsPDF from "jspdf";
 
 interface Props {
   content: string;
@@ -25,6 +26,130 @@ export default function GeneratedContent({ content, isLoading }: Props) {
     toast.success("File downloaded!");
   };
 
+  const handleDownloadPDF = () => {
+    try {
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 56;
+      const maxWidth = pageWidth - margin * 2;
+      let y = margin;
+
+      // Strip emojis & symbols Helvetica can't render (keep basic latin + punctuation + cyrillic)
+      const stripUnsupported = (s: string) =>
+        s
+          // remove emoji ranges & pictographs
+          .replace(
+            /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\uFE0F\u200D]/gu,
+            ""
+          )
+          .replace(/\s+$/g, "");
+
+      const ensureSpace = (needed: number) => {
+        if (y + needed > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+      };
+
+      const writeWrapped = (
+        text: string,
+        opts: { size: number; style: "normal" | "bold"; indent?: number; bullet?: string; gapAfter?: number }
+      ) => {
+        const indent = opts.indent ?? 0;
+        const bullet = opts.bullet ?? "";
+        doc.setFont("helvetica", opts.style);
+        doc.setFontSize(opts.size);
+        const lineHeight = opts.size * 1.4;
+        const bulletWidth = bullet ? doc.getTextWidth(bullet + " ") : 0;
+        const wrapWidth = maxWidth - indent - bulletWidth;
+        const lines = doc.splitTextToSize(text, wrapWidth);
+        lines.forEach((line: string, i: number) => {
+          ensureSpace(lineHeight);
+          if (i === 0 && bullet) {
+            doc.text(bullet, margin + indent, y);
+          }
+          doc.text(line, margin + indent + bulletWidth, y);
+          y += lineHeight;
+        });
+        if (opts.gapAfter) y += opts.gapAfter;
+      };
+
+      const rawLines = content.split("\n");
+      for (let raw of rawLines) {
+        let line = stripUnsupported(raw);
+        // remove inline markdown emphasis & code ticks
+        line = line
+          .replace(/\*\*(.+?)\*\*/g, "$1")
+          .replace(/__(.+?)__/g, "$1")
+          .replace(/`([^`]+)`/g, "$1");
+
+        const trimmed = line.trim();
+        if (!trimmed) {
+          y += 8;
+          continue;
+        }
+
+        // Headings
+        const h = trimmed.match(/^(#{1,6})\s+(.*)$/);
+        if (h) {
+          const level = h[1].length;
+          const sizes = [18, 16, 14, 13, 12, 12];
+          const size = sizes[level - 1];
+          y += 6;
+          writeWrapped(h[2], { size, style: "bold", gapAfter: 6 });
+          continue;
+        }
+
+        // Bullets (-, *, •) with possible leading spaces for nesting
+        const bullet = line.match(/^(\s*)[-*•]\s+(.*)$/);
+        if (bullet) {
+          const depth = Math.floor(bullet[1].length / 2);
+          const indent = 14 + depth * 14;
+          writeWrapped(bullet[2].replace(/^\*+\s*/, ""), {
+            size: 11,
+            style: "normal",
+            indent,
+            bullet: "•",
+          });
+          continue;
+        }
+
+        // Numbered list
+        const num = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
+        if (num) {
+          const depth = Math.floor(num[1].length / 2);
+          const indent = 14 + depth * 14;
+          writeWrapped(num[3], {
+            size: 11,
+            style: "normal",
+            indent,
+            bullet: `${num[2]}.`,
+          });
+          continue;
+        }
+
+        // Horizontal rule / separator
+        if (/^-{3,}$/.test(trimmed)) {
+          y += 4;
+          ensureSpace(10);
+          doc.setDrawColor(180);
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 10;
+          continue;
+        }
+
+        // Paragraph
+        writeWrapped(line, { size: 11, style: "normal", gapAfter: 6 });
+      }
+
+      doc.save("generated-content.pdf");
+      toast.success("PDF downloaded!");
+    } catch {
+      toast.error("Failed to generate PDF");
+    }
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       await navigator.share({ text: content });
@@ -44,7 +169,10 @@ export default function GeneratedContent({ content, isLoading }: Props) {
               <Copy size={14} className="mr-1" /> Copy
             </Button>
             <Button variant="outline" size="sm" onClick={handleDownload}>
-              <Download size={14} className="mr-1" /> Download
+              <Download size={14} className="mr-1" /> TXT
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+              <FileText size={14} className="mr-1" /> PDF
             </Button>
             <Button variant="outline" size="sm" onClick={handleShare}>
               <Share2 size={14} className="mr-1" /> Share

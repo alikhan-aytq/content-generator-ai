@@ -140,8 +140,8 @@ export default function GeneratorView({
       <div className="mx-auto grid max-w-7xl gap-6 lg:h-full lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-stretch">
         {/* Left column: settings + generate button */}
         <div className="flex min-h-0 flex-col">
-          <div className="flex flex-1 flex-col rounded-xl border bg-card p-4 lg:min-h-0 lg:h-full">
-            <div className="flex-1 space-y-4 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+          <div className="flex flex-1 flex-col rounded-xl border bg-card p-3 lg:min-h-0 lg:h-full">
+            <div className="flex-1 space-y-3 lg:min-h-0">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-primary">Content Type</label>
                 <ContentTypeSelector selected={contentType} onSelect={setContentType} />
